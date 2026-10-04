@@ -609,6 +609,7 @@ async def build_chat_context(
     chat_processor,
     message: str,
     session_id: str,
+    selected_notes_context: str | None = None,
     preset_id=None,
     att_ids: list = None,
     use_web=None,
@@ -742,6 +743,15 @@ async def build_chat_context(
     # Inject pre-fetched search context (compare mode)
     if search_context and allow_tool_preprocessing and not casual_low_signal:
         preface.append(untrusted_context_message("prefetched search context", search_context))
+
+    # Inject selected notes as context
+    if selected_notes_context:
+        preface.append(
+            untrusted_context_message(
+                "Selected notes and todos",
+                selected_notes_context,
+            )
+        )
 
     # YouTube transcripts
     for transcript in preprocessed.youtube_transcripts:

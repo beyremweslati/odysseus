@@ -61,6 +61,7 @@ import { loadPanel } from './panels.js';
   let _contextHeaderData = null;
   let _contextHeaderBound = false;
   let _pendingToolApproval = null;
+  const _selectedNoteIdsBySession = new Map();
 
   function _submitToolApprovalWhenIdle(approvalId) {
     if (
@@ -89,6 +90,30 @@ import { loadPanel } from './panels.js';
       document_id: String(detail.document_id || ''),
     };
     _submitToolApprovalWhenIdle(_pendingToolApproval.approval_id);
+  });
+
+  window.addEventListener('odysseus:notes-context-selected', (event) => {
+    const noteIds = event.detail?.noteIds;
+
+    if (!Array.isArray(noteIds) || noteIds.length === 0) return;
+
+    const sessionId = sessionModule.getCurrentSessionId?.();
+
+    if (!sessionId) {
+      console.warn('Cannot attach Notes context: no active chat session');
+      return;
+    }
+
+    _selectedNoteIdsBySession.set(sessionId, noteIds);
+    _renderSelectedNotesIndicator(noteIds);
+  });
+  document.getElementById('selected-notes-context-btn')?.addEventListener('click', () => {
+    const sessionId = sessionModule.getCurrentSessionId?.();
+
+    if (!sessionId) return;
+
+    _selectedNoteIdsBySession.delete(sessionId);
+    _renderSelectedNotesIndicator([]);
   });
 
   function _fmtContextNumber(n) {
@@ -143,6 +168,26 @@ import { loadPanel } from './panels.js';
     icon.innerHTML = _contextRingMarkup(value, { includeLabel: false });
   }
 
+  function _renderSelectedNotesIndicator(noteIds){
+    const button = document.getElementById('selected-notes-context-btn');
+    const count = document.getElementById('selected-notes-context-count');
+
+    if (!button || !count) return;
+
+    const total = Array.isArray(noteIds) ? noteIds.length : 0;
+    if(!total){
+      button.style.display = 'none';
+      count.textContent = '';
+      return;
+    }
+    count.textContent = `${total} note${total === 1 ? '' : 's'} selected`;
+    button.style.display = '';
+    button.title = `${total} selected Note/Todo${total === 1 ? '' : 's'} — click to clear`;
+    button.setAttribute(
+      'aria-label',
+      `Clear ${total} selected Note/Todo${total === 1 ? '' : 's'} context`
+    );
+  }
   function _liveSessionModule() {
     return (window.sessionModule && window.sessionModule.getCurrentSessionId)
       ? window.sessionModule
@@ -1830,6 +1875,12 @@ import { loadPanel } from './panels.js';
       const fd = new FormData();
       fd.append('message', approvalForSend ? '' : _finalMsgWithInject);
       fd.append('session', streamSessionId);
+
+      const selectedNoteIds = _selectedNoteIdsBySession.get(streamSessionId) || [];
+      if(selectedNoteIds.length){
+        fd.append('selected_note_ids', JSON.stringify(selectedNoteIds))
+      }
+
       if (approvalForSend) {
         fd.append('tool_approval_id', approvalForSend.approval_id);
         fd.append('tool_approval_decision', approvalForSend.decision);
