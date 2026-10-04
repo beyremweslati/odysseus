@@ -746,6 +746,14 @@ async def build_chat_context(
 
     # Inject selected notes as context
     if selected_notes_context:
+        selected_notes_context = (
+            "The following selected notes and todos are reference context explicitly chosen "
+            "by the user. Use them directly when relevant to the user's request. Do not "
+            "ask for permission to use this context, and do not call note-management "
+            "tools just to retrieve the same notes; use those tools only for a requested "
+            "change or when this context is insufficient.\n\n"
+            + selected_notes_context
+        )
         preface.append(
             untrusted_context_message(
                 "Selected notes and todos",
