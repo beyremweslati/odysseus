@@ -107,6 +107,13 @@ import { loadPanel } from './panels.js';
     _selectedNoteIdsBySession.set(sessionId, noteIds);
     _renderSelectedNotesIndicator(noteIds);
   });
+  
+  window.addEventListener('odysseus:session-changed', (event) => {
+    const sessionId = event.detail?.sessionId;
+    const noteIds = _selectedNoteIdsBySession.get(sessionId) || [];
+    _renderSelectedNotesIndicator(noteIds);
+  });
+
   document.getElementById('selected-notes-context-btn')?.addEventListener('click', () => {
     const sessionId = sessionModule.getCurrentSessionId?.();
 
